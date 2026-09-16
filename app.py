@@ -93,7 +93,7 @@ with tab1:
                     st.write(f"🔥 **Calories :** {repas.get('kcal', '')} kcal / pers.")
                     st.markdown("### 🛒 Ingrédients (pour 2)")
                     for ing in repas["ingredients"]:
-                        st.write(- f"{ing['nom']} : {ing['quantite']} {ing['unite']}")
+                        st.write(f"- {ing['nom']} : {ing['quantite']} {ing['unite']}")
                     st.markdown("### 🍳 Préparation")
                     for etape in repas.get("recette", []):
                         st.write(f"- {etape}")
@@ -110,7 +110,7 @@ with tab2:
                 unite = ing["unite"]
                 cle = f"{nom} ({unite})"
                 if rayon not in courses:
-                    courses[rayon] {}
+                    courses[rayon] = {}
                 try:
                     courses[rayon][cle] = courses[rayon].get(cle, 0) + float(qte)
                 except ValueError:
