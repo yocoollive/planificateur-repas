@@ -6,21 +6,18 @@ import re
 # Configuration de la page
 st.set_page_config(page_title="Menu & Courses", page_icon="🥗", layout="centered")
 
-# --- DESIGN CSS : RETOUR AU FOND NOIR / STYLE APP NATIVE ---
+# --- DESIGN CSS : FOND SOMBRE & STYLE APP NATIVE ---
 st.markdown("""
     <style>
-    /* Masquer le header et le footer de Streamlit */
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
     header {visibility: hidden;}
     
-    /* Forcer un fond sombre élégant et du texte clair partout */
     .stApp {
         background-color: #0E1117;
         color: #FAFAFA;
     }
     
-    /* Style des cartes / expandeurs */
     .streamlit-expanderHeader {
         background-color: #1E2530 !important;
         color: #FAFAFA !important;
@@ -29,7 +26,6 @@ st.markdown("""
         margin-bottom: 8px;
     }
     
-    /* Correction de la lisibilité des textes des onglets */
     .stTabs [data-baseweb="tab-list"] button div div {
         color: #FAFAFA !important;
     }
@@ -38,11 +34,11 @@ st.markdown("""
 
 st.title("🥗 Menu & Courses")
 
-# --- CONNEXION IA SÉCURISÉE (Modèle stable) ---
+# --- CONNEXION IA SÉCURISÉE ---
 try:
     genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
-    # Utilisation de gemini-1.5-flash (très rapide et idéal pour éviter les quotas bloquants)
-    model = genai.GenerativeModel(model_name="gemini-1.5-flash")
+    # Utilisation du modèle standard sans préfixe restrictif pour éviter l'erreur 404
+    model = genai.GenerativeModel('gemini-1.5-flash')
 except Exception as e:
     st.error(f"Erreur de configuration IA : {e}")
     model = None
@@ -143,7 +139,7 @@ with tab1:
                     else:
                         st.error("Erreur de format de l'IA. Relance.")
                 except Exception as e:
-                    st.error(f"Erreur de génération (Quota dépassé ou autre) : {e}")
+                    st.error(f"Erreur de génération : {e}")
 
     st.write("---")
     if st.session_state.menu_data:
@@ -255,7 +251,7 @@ with tab3:
     if st.session_state.batch_data:
         st.info("Voici le détail exact des quantités à cuisiner en avance et à répartir dans vos boîtes hermétiques :")
         for item in st.session_state.batch_data:
-            st.write(f"- **{item.get('boite')}** : {item.get('quantite_par_boite')} *({item.get('frequence')})*")
+            st.write(f"- {item.get('boite')} : {item.get('quantite_par_boite')} *({item.get('frequence')})*")
     else:
         st.warning("Générez d'abord un menu pour voir le planning de batch cooking.")
 
