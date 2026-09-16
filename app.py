@@ -1,3 +1,7 @@
+import streamlit as st
+import google.generativeai as genai
+import json
+import re
 import firebase_admin
 from firebase_admin import credentials
 from firebase_admin import firestore
@@ -13,6 +17,8 @@ db = firestore.client()
 API_KEY = "AQ.Ab8RN6JiARwKiNhKtqEPJF8e2Gri_ieK9j6DWyD5QDNB86iDtQ"
 genai.configure(api_key=API_KEY)
 model = genai.GenerativeModel(model_name="gemini-3.6-flash")
+
+# ... (le reste du code avec st.set_page_config etc. reste identique)
 
 st.set_page_config(page_title="Générateur de Repas", page_icon="🤖", layout="centered")
 
