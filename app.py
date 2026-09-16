@@ -10,8 +10,8 @@ st.title("🤖 Menu, Courses & Favoris")
 # --- CONNEXION IA SÉCURISÉE ---
 try:
     genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
-    # Utilisation du modèle actuel mis à jour
-    model = genai.GenerativeModel(model_name="gemini-2.0-flash")
+    # Utilisation du nouveau modèle indiqué par l'erreur
+    model = genai.GenerativeModel(model_name="gemini-3.6-flash")
     st.success("✅ Connecté à l'IA avec succès")
 except Exception as e:
     st.error(f"Erreur de configuration IA : {e}")
