@@ -34,11 +34,10 @@ st.markdown("""
 
 st.title("🥗 Menu & Courses")
 
-# --- CONNEXION IA SÉCURISÉE ---
+# --- CONNEXION IA SÉCURISÉE (Modèle gemini-pro ultra stable) ---
 try:
     genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
-    # Utilisation du modèle standard sans préfixe restrictif pour éviter l'erreur 404
-    model = genai.GenerativeModel('gemini-1.5-flash')
+    model = genai.GenerativeModel('gemini-pro')
 except Exception as e:
     st.error(f"Erreur de configuration IA : {e}")
     model = None
