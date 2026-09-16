@@ -2,9 +2,8 @@ import streamlit as st
 import google.generativeai as genai
 import json
 import re
-import urllib.parse
 
-# Configuration Gemini mise à jour avec le nouveau modèle
+# Configuration Gemini
 genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
 model = genai.GenerativeModel(model_name="gemini-3.6-flash")
 
@@ -13,31 +12,15 @@ st.title("🥗 Menu, Courses, Batch & Favoris")
 
 jours_semaine = ["Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi", "Dimanche"]
 
-# Récupération des données depuis l'URL
-query_params = st.query_params
-app_data = {"menu": {}, "batch": [], "favoris": {}}
-
-if "data" in query_params:
-    try:
-        json_str = urllib.parse.unquote(query_params["data"])
-        app_data = json.loads(json_str)
-        if not isinstance(app_data, dict):
-            app_data = {"menu": {}, "batch": [], "favoris": {}}
-    except Exception:
-        app_data = {"menu": {}, "batch": [], "favoris": {}}
-
-menu_actuel = app_data.get("menu", {})
-batch_actuel = app_data.get("batch", [])
-favoris_actuels = app_data.get("favoris", {})
+# Initialisation de la session state pour garder les données en mémoire sans saturer l'URL
+if "menu" not in st.session_state:
+    st.session_state.menu = {}
+if "batch" not in st.session_state:
+    st.session_state.batch = []
+if "favoris" not in st.session_state:
+    st.session_state.favoris = {}
 
 tab1, tab2, tab3, tab4 = st.tabs(["📅 Plan", "🛒 Courses", "🧊 Batch Cooking", "⭐ Favoris"])
-
-# Fonction de sauvegarde globale dans l'URL
-def sauvegarder_url():
-    app_data["menu"] = menu_actuel
-    app_data["batch"] = batch_actuel
-    app_data["favoris"] = favoris_actuels
-    st.query_params["data"] = json.dumps(app_data)
 
 # ONGLET 1 : PLAN DE LA SEMAINE
 with tab1:
@@ -94,30 +77,27 @@ with tab1:
                         data_brute = json.loads(match.group(0))
                         nouveaux_jours = data_brute.get("jours", [])
                         for repas in nouveaux_jours:
-                            menu_actuel[repas["jour"]] = repas
-                        batch_actuel = data_brute.get("batch_cooking", [])
+                            st.session_state.menu[repas["jour"]] = repas
+                        st.session_state.batch = data_brute.get("batch_cooking", [])
                         
-                        sauvegarder_url()
-                        st.success("Menu et Batch Cooking générés ! Le lien a été mis à jour.")
+                        st.success("Menu et Batch Cooking générés avec succès !")
                         st.rerun()
                 except Exception as e:
                     st.error(f"Erreur : {e}")
 
-    if menu_actuel:
-        st.info("💡 **Astuce Partage :** Copie l'URL de cette page pour la partager avec ta compagne sur son iPhone !")
+    if st.session_state.menu:
         for jour in jours_semaine:
-            repas = menu_actuel.get(jour)
+            repas = st.session_state.menu.get(jour)
             if repas:
                 with st.expander(f"**{jour}** : {repas['nom']} ({repas['type']}) | ⏱️ {repas.get('temps_prep', '')}"):
                     c1, c2 = st.columns([3, 1])
                     c1.write(f"🔥 **Calories :** {repas.get('kcal', '')} kcal / pers.")
                     
                     nom_plat = repas['nom']
-                    est_favori = nom_plat in favoris_actuels
+                    est_favori = nom_plat in st.session_state.favoris
                     if not est_favori:
                         if c2.button("⭐ Favori", key=f"fav_{jour}"):
-                            favoris_actuels[nom_plat] = repas
-                            sauvegarder_url()
+                            st.session_state.favoris[nom_plat] = repas
                             st.rerun()
                     else:
                         c2.success("⭐ Favori")
@@ -131,9 +111,9 @@ with tab1:
 
 # ONGLET 2 : LISTE DE COURSES
 with tab2:
-    if menu_actuel:
+    if st.session_state.menu:
         courses = {}
-        for repas in menu_actuel.values():
+        for repas in st.session_state.menu.values():
             for ing in repas.get("ingredients", []):
                 rayon = str(ing.get("rayon", "Autre")).capitalize()
                 nom = str(ing["nom"]).capitalize()
@@ -159,8 +139,8 @@ with tab2:
 # ONGLET 3 : BATCH COOKING
 with tab3:
     st.subheader("🧊 Préparation Batch Cooking (Dimanche)")
-    if batch_actuel:
-        for item in batch_actuel:
+    if st.session_state.batch:
+        for item in st.session_state.batch:
             st.markdown(f"- **{item.get('element')}** ({item.get('quantite')}) : {item.get('instruction')}")
     else:
         st.info("Aucun batch cooking généré. Génère un menu dans le premier onglet pour voir les instructions du dimanche.")
@@ -168,12 +148,11 @@ with tab3:
 # ONGLET 4 : FAVORIS
 with tab4:
     st.subheader("⭐ Vos Recettes Favorites")
-    if favoris_actuels:
-        for nom, repas in list(favoris_actuels.items()):
+    if st.session_state.favoris:
+        for nom, repas in list(st.session_state.favoris.items()):
             with st.expander(f"⭐ {nom} ({repas.get('type', '')})"):
                 if st.button("❌ Supprimer", key=f"del_fav_{nom}"):
-                    del favoris_actuels[nom]
-                    sauvegarder_url()
+                    del st.session_state.favoris[nom]
                     st.rerun()
                 st.markdown("### Ingrédients")
                 for ing in repas.get("ingredients", []):
