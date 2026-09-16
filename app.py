@@ -1,13 +1,8 @@
-import streamlit as st
-import google.generativeai as genai
-import json
-import re
 import firebase_admin
 from firebase_admin import credentials
 from firebase_admin import firestore
 
-# --- 1. INITIALISATION FIREBASE ---
-# On vérifie si l'app est déjà initialisée pour éviter les erreurs quand la page s'actualise
+# --- 1. INITIALISATION FIREBASE SÉCURISÉE ---
 if not firebase_admin._apps:
     cred = credentials.Certificate("firebase_key.json")
     firebase_admin.initialize_app(cred)
