@@ -1,14 +1,19 @@
-import streamlit as st
-import google.generativeai as genai
-import json
-import re
 import firebase_admin
 from firebase_admin import credentials
 from firebase_admin import firestore
+import streamlit as st
+import json
 
-# --- 1. INITIALISATION FIREBASE SÉCURISÉE ---
+# --- INITIALISATION FIREBASE SÉCURISÉE VIA STREAMLIT SECRETS ---
 if not firebase_admin._apps:
-    cred = credentials.Certificate("firebase_key.json")
+    # On transforme les secrets de Streamlit en dictionnaire lisible par Firebase
+    firebase_config = dict(st.secrets["firebase"])
+    
+    # Correction indispensable pour les sauts de ligne dans la clé privée
+    if "private_key" in firebase_config:
+        firebase_config["private_key"] = firebase_config["private_key"].replace("\\n", "\n")
+        
+    cred = credentials.Certificate(firebase_config)
     firebase_admin.initialize_app(cred)
 
 db = firestore.client()
