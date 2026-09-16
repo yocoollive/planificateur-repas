@@ -28,18 +28,22 @@ st.set_page_config(page_title="Générateur de Repas", page_icon="🤖", layout=
 st.title("🤖 Menu, Courses & Favoris")
 st.caption("✅ Connecté au Cloud (Firebase) & IA (Gemini)")
 
-# --- 3. CHARGEMENT DEPUIS LA BASE DE DONNÉES ---
-doc_semaine = db.collection('planificateur').document('menus_semaine').get()
-if doc_semaine.exists:
-    st.session_state.menu_data = doc_semaine.to_dict().get("menus", {})
-else:
+# --- 3. CHARGEMENT SÉCURISÉ DEPUIS LA BASE DE DONNÉES ---
+if 'menu_data' not in st.session_state:
     st.session_state.menu_data = {}
-
-doc_favoris = db.collection('planificateur').document('recettes_favorites').get()
-if doc_favoris.exists:
-    st.session_state.favoris = doc_favoris.to_dict().get("liste", {})
-else:
+if 'favoris' not in st.session_state:
     st.session_state.favoris = {}
+
+try:
+    doc_semaine = db.collection('planificateur').document('menus_semaine').get()
+    if doc_semaine.exists:
+        st.session_state.menu_data = doc_semaine.to_dict().get("menus", {})
+
+    doc_favoris = db.collection('planificateur').document('recettes_favorites').get()
+    if doc_favoris.exists:
+        st.session_state.favoris = doc_favoris.to_dict().get("liste", {})
+except Exception as e:
+    st.warning(f"Mode hors-ligne ou erreur de chargement Firebase : {e}")
 
 jours_semaine = ["Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi", "Dimanche"]
 
