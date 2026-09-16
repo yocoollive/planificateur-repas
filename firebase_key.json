@@ -1,0 +1,13 @@
+{
+  "type": "service_account",
+  "project_id": "planificateur-repas-12401",
+  "private_key_id": "2598d27dec8454ed1b0d3448396c0e1ac0a17ab4",
+  "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQDLpIMw3raFGdZG\nCBcYL9h8Ngd4p0zx4QhO2zg4kF5uVnCB0v+SSK8BLmy2mSYBzL3cM+TArUjwFmhe\nOdSjg2dggpzDHmpyMIqe+5znPY+xZVkOHTlxm0ui337qZSACUytMmeqNrFwIbhnD\ng+kyj7NFye6Jcj7zokaaRin8TWMm6n4MnEA1LYNAfV8sz9QfNZ2g8aSgyhAG7TSi\nxXpUd/5W4CMm24UtowVk7w32wwbUJFQr/d260Ck7FboWy81ICsIaTZPIfi7iz3d+\nkJWX2kpOK8hmbAaPFpmiXD3U9MGyqXCDoc4OXs/cCSPSV8UyDcOR/TLJSQC1R3yi\nee2Z7LZ9AgMBAAECggEAE8oXAgrdwGp/cz4tbFxkVJHCWrW7WWGnN1TzWv/TxWb6\n0PFQ6uv+roYB6ruDdFC4SviNOTIkI+MX9yXC8oIX0jE78nQquPhBoeuzcDKANVqz\nDRctWJgHgVQbVvdG/u+kUtg9152q/4C5JtHs7MzTiZHzIpud3xQwEz7qE2QiOtfW\nkDT8msQGL50n5Keuazvq2O9x8trYcwdCF97CkoAERz5KOSD4quV/PfbHQ1a867X1\n0Uk5ljw2WgMA1axNaR44vvu7ysdVvIsClEJ/4YLUITLA6/O2mhjWOvexsW7JaCtx\nN5kjbCuJfv0S5rhASHT8tObWZTXJl5sZxbAowNRcqwKBgQDwFlv5BZO+J1UVihiL\nEsbu9HhSJqa731BOVxCriEcofmYgdcJ81lfmXdzXG+U6KfPJis6tI9d9OLhliZcM\n8zsz7XUdyuvXPqaTedg49jnYsnw2T516gqzpe5eh8ytar/cR18PhnkK6uA7taaY7\nw6ZsdUdaMWHNKGCvhY4hOFh50wKBgQDZI8ik/6csY9Eb50zm8KzWy7wvkgTfIafL\nx+plbILirpbJ4ZZPNXgtDsvOCqoEDcHgCp9OpXVQY2B3v6jJlW77AdojWZCBN6vZ\nrEzzbrSPf0uvc9UWwioHFJUDgv/95OnC4DRit065Pfg/URiTn/J5ZGpOA4OcNuvd\n62v3sH4MbwKBgFbZD74eCVrA6aNYCBbO3Q11e8zj1G6jkm40SoByVKNOTe0yC/+S\nnctkas2Zdqs6n8hpIOg6zemrSfDY+74ggmr/W91CGVwMer9gVRoN39EGh64x0JqP\niLMRFUHtL+KnQq2+qkoEMMlQaX3yOMLnvF0Bc6UpteI71/XGTyqvMjonAoGBAI1t\nzzwZAAvbn9Gq393zmL/2x0W8t8uVojMKrVMOUFnRGYm4kyxYSUQfxQMY0w/83fBN\nOuIAxt5rO+QDQ6641CZNWIV5yrM/TYFjxmMwEg78/JD0wzAlmzYtY7l707zNIqy5\nV6WMe4wQHucurPFKVqZWjx7tDwXqh8ptkk8r942lAoGBAKvBFxI/jlzIs0DTFUVO\nx5Jx47mugpRRfI3aj3aqVL1gcsVnq+26dWOTOkXvH3Z+XCrp++US/hp4Ob8wlkoT\nFU5DB2uHv7gdj4ayiPxNxi6s2DxlWRTx8kTJacGmprEOLWXlOc95yKEi3BWfWCyh\nnQOqSV9tcUFeOJfBGUkGsF+3\n-----END PRIVATE KEY-----\n",
+  "client_email": "firebase-adminsdk-fbsvc@planificateur-repas-12401.iam.gserviceaccount.com",
+  "client_id": "103710271416579339658",
+  "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+  "token_uri": "https://oauth2.googleapis.com/token",
+  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/firebase-adminsdk-fbsvc%40planificateur-repas-12401.iam.gserviceaccount.com",
+  "universe_domain": "googleapis.com"
+}
