@@ -34,10 +34,13 @@ st.markdown("""
 
 st.title("🥗 Menu & Courses")
 
-# --- CONNEXION IA SÉCURISÉE (Modèle gemini-pro ultra stable) ---
+# --- CONNEXION IA SÉCURISÉE AUTOMATIQUE ---
 try:
     genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
-    model = genai.GenerativeModel('gemini-pro')
+    # Recherche automatique du premier modèle disponible qui génère du contenu
+    modelsDisponibles = [m.name for m in genai.list_models() if 'generateContent' in m.supported_generation_methods]
+    nom_modele = modelsDisponibles[0] if modelsDisponibles else 'gemini-1.5-flash'
+    model = genai.GenerativeModel(nom_modele)
 except Exception as e:
     st.error(f"Erreur de configuration IA : {e}")
     model = None
