@@ -4,9 +4,9 @@ import json
 import re
 import urllib.parse
 
-# Configuration Gemini mise à jour
+# Configuration Gemini mise à jour avec le nouveau modèle
 genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
-model = genai.GenerativeModel(model_name="gemini-2.5-flash")
+model = genai.GenerativeModel(model_name="gemini-3.6-flash")
 
 st.set_page_config(page_title="Menu & Courses - Ulysse & Compagne", page_icon="🥗", layout="centered")
 st.title("🥗 Menu, Courses, Batch & Favoris")
