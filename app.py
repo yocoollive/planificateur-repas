@@ -18,22 +18,18 @@ API_KEY = "AQ.Ab8RN6JiARwKiNhKtqEPJF8e2Gri_ieK9j6DWyD5QDNB86iDtQ"
 genai.configure(api_key=API_KEY)
 model = genai.GenerativeModel(model_name="gemini-3.6-flash")
 
-# ... (le reste du code avec st.set_page_config etc. reste identique)
-
 st.set_page_config(page_title="Générateur de Repas", page_icon="🤖", layout="centered")
 
 st.title("🤖 Menu, Courses & Favoris")
 st.caption("✅ Connecté au Cloud (Firebase) & IA (Gemini)")
 
 # --- 3. CHARGEMENT DEPUIS LA BASE DE DONNÉES ---
-# Récupération du menu de la semaine
 doc_semaine = db.collection('planificateur').document('menus_semaine').get()
 if doc_semaine.exists:
     st.session_state.menu_data = doc_semaine.to_dict().get("menus", {})
 else:
     st.session_state.menu_data = {}
 
-# Récupération des favoris
 doc_favoris = db.collection('planificateur').document('recettes_favorites').get()
 if doc_favoris.exists:
     st.session_state.favoris = doc_favoris.to_dict().get("liste", {})
@@ -110,7 +106,6 @@ with tab1:
                     if match:
                         nouveaux_jours = json.loads(match.group(0)).get("jours", [])
                         
-                        # Mise à jour des jours et SAUVEGARDE SUR FIREBASE
                         for repas in nouveaux_jours:
                             st.session_state.menu_data[repas["jour"]] = repas
                         
@@ -136,7 +131,6 @@ with tab1:
                     if not est_favori:
                         if col_fav2.button("⭐ Ajouter aux favoris", key=f"btn_fav_{jour}_{nom_plat}"):
                             st.session_state.favoris[nom_plat] = repas
-                            # SAUVEGARDE SUR FIREBASE
                             db.collection('planificateur').document('recettes_favorites').set({"liste": st.session_state.favoris})
                             st.rerun()
                     else:
@@ -215,7 +209,6 @@ with tab3:
             with st.expander(f"⭐ {nom} ({repas.get('type', 'Inconnu')})"):
                 if st.button("❌ Retirer des favoris", key=f"del_fav_{nom}"):
                     del st.session_state.favoris[nom]
-                    # SAUVEGARDE SUR FIREBASE
                     db.collection('planificateur').document('recettes_favorites').set({"liste": st.session_state.favoris})
                     st.rerun()
                 
