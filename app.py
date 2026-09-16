@@ -2,21 +2,24 @@ import firebase_admin
 from firebase_admin import credentials
 from firebase_admin import firestore
 import streamlit as st
-import json
 
-# --- INITIALISATION FIREBASE SÉCURISÉE VIA STREAMLIT SECRETS ---
-if not firebase_admin._apps:
-    # On transforme les secrets de Streamlit en dictionnaire lisible par Firebase
-    firebase_config = dict(st.secrets["firebase"])
+st.set_page_config(page_title="Générateur de Repas", page_icon="🤖", layout="centered")
+st.title("🤖 Menu, Courses & Favoris")
+
+# --- TEST DE CONNEXION SÉCURISÉ AVEC AFFICHAGE D'ERREUR ---
+db = None
+try:
+    if not firebase_admin._apps:
+        firebase_config = dict(st.secrets["firebase"])
+        if "private_key" in firebase_config:
+            firebase_config["private_key"] = firebase_config["private_key"].replace("\\n", "\n")
+        cred = credentials.Certificate(firebase_config)
+        firebase_admin.initialize_app(cred)
     
-    # Correction indispensable pour les sauts de ligne dans la clé privée
-    if "private_key" in firebase_config:
-        firebase_config["private_key"] = firebase_config["private_key"].replace("\\n", "\n")
-        
-    cred = credentials.Certificate(firebase_config)
-    firebase_admin.initialize_app(cred)
-
-db = firestore.client()
+    db = firestore.client()
+    st.success("✅ Connecté au Cloud (Firebase) & IA (Gemini)")
+except Exception as e:
+    st.error(re.sub(r'AIzaSy.*', '***CLE_MASQUEE***', str(e))) # Affiche l'erreur exacte si ça plante
 
 # --- 2. CONFIGURATION DE L'IA ---
 API_KEY = st.secrets["GEMINI_API_KEY"]
