@@ -14,7 +14,7 @@ if not firebase_admin._apps:
 db = firestore.client()
 
 # --- 2. CONFIGURATION DE L'IA ---
-API_KEY = "AQ.Ab8RN6JiARwKiNhKtqEPJF8e2Gri_ieK9j6DWyD5QDNB86iDtQ"
+API_KEY = st.secrets["GEMINI_API_KEY"]
 genai.configure(api_key=API_KEY)
 model = genai.GenerativeModel(model_name="gemini-3.6-flash")
 
