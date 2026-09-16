@@ -6,42 +6,43 @@ import re
 # Configuration de la page
 st.set_page_config(page_title="Menu & Courses", page_icon="🥗", layout="centered")
 
-# --- DESIGN CSS "APP NATIVE" & PASTEL ---
+# --- DESIGN CSS : RETOUR AU FOND NOIR / STYLE APP NATIVE ---
 st.markdown("""
     <style>
-    /* Masquer le header et le footer de Streamlit pour un effet application native */
+    /* Masquer le header et le footer de Streamlit */
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
     header {visibility: hidden;}
     
-    /* Fond général pastel très doux */
+    /* Forcer un fond sombre élégant et du texte clair partout */
     .stApp {
-        background-color: #F7F9F6;
+        background-color: #0E1117;
+        color: #FAFAFA;
     }
     
-    /* Style des expandeurs (blocs de repas) façon cartes iOS */
+    /* Style des cartes / expandeurs */
     .streamlit-expanderHeader {
-        background-color: #FFFFFF !important;
+        background-color: #1E2530 !important;
+        color: #FAFAFA !important;
         border-radius: 12px !important;
-        border: 1px solid #E2E8F0 !important;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+        border: 1px solid #2D3748 !important;
         margin-bottom: 8px;
     }
     
-    /* Arrondis et design des conteneurs */
-    div.stButton > button {
-        border-radius: 10px;
-        font-weight: 600;
+    /* Correction de la lisibilité des textes des onglets */
+    .stTabs [data-baseweb="tab-list"] button div div {
+        color: #FAFAFA !important;
     }
     </style>
 """, unsafe_allow_html=True)
 
 st.title("🥗 Menu & Courses")
 
-# --- CONNEXION IA SÉCURISÉE ---
+# --- CONNEXION IA SÉCURISÉE (Modèle stable) ---
 try:
     genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
-    model = genai.GenerativeModel(model_name="gemini-3.6-flash")
+    # Utilisation de gemini-1.5-flash (très rapide et idéal pour éviter les quotas bloquants)
+    model = genai.GenerativeModel(model_name="gemini-1.5-flash")
 except Exception as e:
     st.error(f"Erreur de configuration IA : {e}")
     model = None
@@ -81,7 +82,7 @@ with tab1:
         elif not jours_a_generer:
             st.warning("Aucun jour sélectionné !")
         else:
-            with st.spinner("L'acquisition des menus par l'IA..."):
+            with st.spinner("L'IA prépare vos menus..."):
                 liste_favoris = list(st.session_state.favoris.keys())
                 consigne_favoris = f"Favoris à considérer si possible : {liste_favoris}." if liste_favoris else ""
                 
@@ -142,20 +143,18 @@ with tab1:
                     else:
                         st.error("Erreur de format de l'IA. Relance.")
                 except Exception as e:
-                    st.error(f"Erreur de génération : {e}")
+                    st.error(f"Erreur de génération (Quota dépassé ou autre) : {e}")
 
     st.write("---")
     if st.session_state.menu_data:
         for jour in jours_semaine:
             repas = st.session_state.menu_data.get(jour)
             if repas:
-                # Badge visuel de régime & infos en-tête
                 type_repas = repas.get('type', 'Omnivore')
                 badge = "🥬 Végé" if type_repas == "Végétarien" else "🥩 Omnivore"
-                titre_label = f"**{jour}** : {badge} | {repas['nom']} | ⏱️ {repas.get('temps_prep', 'N/A')} | 🔥 {repas.get('kcal', 0)} kcal"
+                titre_label = f"{jour} : {badge} | {repas['nom']} | ⏱️ {repas.get('temps_prep', 'N/A')} | 🔥 {repas.get('kcal', 0)} kcal"
                 
                 with st.expander(titre_label):
-                    # Bouton Swap unitaire
                     col_swap, col_fav = st.columns([1, 1])
                     with col_swap:
                         if st.button(f"🔄 Remplacer ce plat", key=f"swap_{jour}"):
@@ -163,7 +162,7 @@ with tab1:
                                 prompt_swap = f"""
                                 Génère un unique repas du soir (souper) pour le jour de {jour}, destiné à 2 personnes.
                                 Type imposé : {type_repas}.
-                                Règles strictes : Entre 450 et 520 kcal, AUCUN POIVRON, proportions conformes au plan.
+                                Règles strictes : Entre 450 et 520 kcal, AUCUN POIVRON.
                                 Renvoie UNIQUEMENT du JSON valide au format :
                                 {{
                                   "jour": "{jour}",
@@ -199,7 +198,6 @@ with tab1:
                             st.info("⭐ Déjà en favoris")
                     
                     st.write("---")
-                    # Résumé macro avec barres de progression
                     st.markdown(f"**Résumé macro** — {repas.get('kcal', 0)} kcal")
                     prot = repas.get('proteines', 0)
                     gluc = repas.get('glucides', 0)
