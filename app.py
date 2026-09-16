@@ -5,7 +5,7 @@ import re
 
 # Configuration de la page
 st.set_page_config(page_title="Menu & Courses", page_icon="🥗", layout="centered")
-st.title("🤖 Menu, Courses & Favoris")
+st.title("🤖 Menu, Courses & Batch Cooking")
 
 # --- CONNEXION IA SÉCURISÉE ---
 try:
@@ -26,8 +26,8 @@ if 'favoris' not in st.session_state:
 
 jours_semaine = ["Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi", "Dimanche"]
 
-# --- ONGLETS ---
-tab1, tab2, tab3 = st.tabs(["📅 Plan de la semaine", "🛒 Liste de courses", "⭐ Favoris"])
+# --- ONGLETS (4 onglets désormais) ---
+tab1, tab2, tab3, tab4 = st.tabs(["📅 Plan de la semaine", "🛒 Liste de courses", "🧊 Batch Cooking", "⭐ Favoris"])
 
 # ONGLET 1 : PLAN DE LA SEMAINE
 with tab1:
@@ -63,7 +63,7 @@ with tab1:
                 - AUCUN POIVRON.
                 - Alterner 1 jour Omnivore, 1 jour 100% Végétarien.
                 - Portions pour 2 personnes : 400 à 500g de légumes min, 80-100g de féculents crus (ou 300-350g pommes de terre), 300-360g de viande/poisson OU 320-350g végé, max 2 c.à.s d'huile.
-                - Inclus également une section "batch_cooking" qui liste précisément les féculents et légumes à cuire en avance le dimanche pour la semaine, avec le nombre de tupperwares et le grammage exact par boîte pour 2 personnes.
+                - Inclus également une section "batch_cooking" qui liste précisément les féculents et légumes de base à cuire en avance le dimanche pour la semaine, avec le nombre de boîtes/tupperwares et le grammage exact par boîte pour 2 personnes.
 
                 Renvoie UNIQUEMENT du JSON valide, sans texte autour, selon cette structure exacte :
                 {{
@@ -104,7 +104,6 @@ with tab1:
                         for repas in nouveaux_jours:
                             st.session_state.menu_data[repas["jour"]] = repas
                         
-                        # Sauvegarde du batch cooking
                         st.session_state.batch_data = data_brute.get("batch_cooking", [])
                         
                         st.success("Menu et Batch Cooking générés avec succès !")
@@ -113,15 +112,6 @@ with tab1:
                         st.error("Erreur de format de l'IA. Relance.")
                 except Exception as e:
                     st.error(f"Erreur de génération : {e}")
-
-    # Section Batch Cooking du dimanche
-    if st.session_state.batch_data:
-        st.markdown("---")
-        with st.container():
-            st.markdown("### 🧊 Préparation Batch Cooking du Dimanche")
-            st.info("Voici le détail exact des quantités à préparer et à répartir dans vos boîtes hermétiques pour la semaine :")
-            for item in st.session_state.batch_data:
-                st.write(f"- **{item.get('boite')}** : {item.get('quantite_par_boite')} *({item.get('frequence')})*")
 
     st.write("---")
     if st.session_state.menu_data:
@@ -184,8 +174,18 @@ with tab2:
     else:
         st.warning("Générez d'abord un menu dans le premier onglet.")
 
-# ONGLET 3 : FAVORIS
+# ONGLET 3 : BATCH COOKING DU DIMANCHE
 with tab3:
+    st.subheader("🧊 Préparation Batch Cooking du Dimanche")
+    if st.session_state.batch_data:
+        st.info("Voici le détail exact des quantités à cuisiner en avance et à répartir dans vos boîtes hermétiques pour la semaine :")
+        for item in st.session_state.batch_data:
+            st.write(f"- **{item.get('boite')}** : {item.get('quantite_par_boite')} *({item.get('frequence')})*")
+    else:
+        st.warning("Générez d'abord un menu dans le premier onglet pour voir le planning de batch cooking.")
+
+# ONGLET 4 : FAVORIS
+with tab4:
     st.subheader("⭐ Vos Recettes Favorites")
     if st.session_state.favoris:
         for nom, repas in list(st.session_state.favoris.items()):
