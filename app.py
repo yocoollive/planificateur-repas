@@ -10,7 +10,6 @@ st.title("🤖 Menu, Courses & Favoris")
 # --- CONNEXION IA SÉCURISÉE ---
 try:
     genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
-    # Utilisation du nouveau modèle indiqué par l'erreur
     model = genai.GenerativeModel(model_name="gemini-3.6-flash")
     st.success("✅ Connecté à l'IA avec succès")
 except Exception as e:
@@ -20,6 +19,8 @@ except Exception as e:
 # Initialisation de la mémoire
 if 'menu_data' not in st.session_state:
     st.session_state.menu_data = {}
+if 'batch_data' not in st.session_state:
+    st.session_state.batch_data = {}
 if 'favoris' not in st.session_state:
     st.session_state.favoris = {}
 
@@ -50,7 +51,7 @@ with tab1:
         elif not jours_a_generer:
             st.warning("Aucun jour sélectionné !")
         else:
-            with st.spinner("L'IA prépare vos menus sur-mesure..."):
+            with st.spinner("L'IA prépare vos menus et calcule votre Batch Cooking..."):
                 liste_favoris = list(st.session_state.favoris.keys())
                 consigne_favoris = f"Favoris à considérer si possible : {liste_favoris}." if liste_favoris else ""
                 
@@ -62,8 +63,9 @@ with tab1:
                 - AUCUN POIVRON.
                 - Alterner 1 jour Omnivore, 1 jour 100% Végétarien.
                 - Portions pour 2 personnes : 400 à 500g de légumes min, 80-100g de féculents crus (ou 300-350g pommes de terre), 300-360g de viande/poisson OU 320-350g végé, max 2 c.à.s d'huile.
-                
-                Renvoie UNIQUEMENT du JSON valide, sans texte autour :
+                - Inclus également une section "batch_cooking" qui liste précisément les féculents et légumes à cuire en avance le dimanche pour la semaine, avec le nombre de tupperwares et le grammage exact par boîte pour 2 personnes.
+
+                Renvoie UNIQUEMENT du JSON valide, sans texte autour, selon cette structure exacte :
                 {{
                   "jours": [
                     {{
@@ -83,6 +85,13 @@ with tab1:
                         "Saisir la viande à la minute."
                       ]
                     }}
+                  ],
+                  "batch_cooking": [
+                    {{
+                      "boite": "Boîte Féculent (ex: Riz complet)",
+                      "quantite_par_boite": "90g cru (ou 220g cuit pour 2)",
+                      "frequence": "Préparer 3 boîtes pour la semaine"
+                    }}
                   ]
                 }}
                 """
@@ -90,16 +99,31 @@ with tab1:
                     reponse = model.generate_content(prompt)
                     match = re.search(r'\{.*\}', reponse.text, re.DOTALL)
                     if match:
-                        nouveaux_jours = json.loads(match.group(0)).get("jours", [])
+                        data_brute = json.loads(match.group(0))
+                        nouveaux_jours = data_brute.get("jours", [])
                         for repas in nouveaux_jours:
                             st.session_state.menu_data[repas["jour"]] = repas
-                        st.success("Menu généré avec succès !")
+                        
+                        # Sauvegarde du batch cooking
+                        st.session_state.batch_data = data_brute.get("batch_cooking", [])
+                        
+                        st.success("Menu et Batch Cooking générés avec succès !")
                         st.rerun()
                     else:
                         st.error("Erreur de format de l'IA. Relance.")
                 except Exception as e:
                     st.error(f"Erreur de génération : {e}")
 
+    # Section Batch Cooking du dimanche
+    if st.session_state.batch_data:
+        st.markdown("---")
+        with st.container():
+            st.markdown("### 🧊 Préparation Batch Cooking du Dimanche")
+            st.info("Voici le détail exact des quantités à préparer et à répartir dans vos boîtes hermétiques pour la semaine :")
+            for item in st.session_state.batch_data:
+                st.write(f"- **{item.get('boite')}** : {item.get('quantite_par_boite')} *({item.get('frequence')})*")
+
+    st.write("---")
     if st.session_state.menu_data:
         for jour in jours_semaine:
             repas = st.session_state.menu_data.get(jour)
