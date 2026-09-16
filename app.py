@@ -26,7 +26,7 @@ if 'favoris' not in st.session_state:
 
 jours_semaine = ["Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi", "Dimanche"]
 
-# --- ONGLETS (4 onglets désormais) ---
+# --- ONGLETS ---
 tab1, tab2, tab3, tab4 = st.tabs(["📅 Plan de la semaine", "🛒 Liste de courses", "🧊 Batch Cooking", "⭐ Favoris"])
 
 # ONGLET 1 : PLAN DE LA SEMAINE
@@ -63,9 +63,9 @@ with tab1:
                 - AUCUN POIVRON.
                 - Alterner 1 jour Omnivore, 1 jour 100% Végétarien.
                 - Portions pour 2 personnes : 400 à 500g de légumes min, 80-100g de féculents crus (ou 300-350g pommes de terre), 300-360g de viande/poisson OU 320-350g végé, max 2 c.à.s d'huile.
-                - Inclus également une section "batch_cooking" qui liste précisément les féculents et légumes de base à cuire en avance le dimanche pour la semaine, avec le nombre de boîtes/tupperwares et le grammage exact par boîte pour 2 personnes.
+                - Inclus les macros précises (protéines, glucides, lipides) pour le repas.
 
-                Renvoie UNIQUEMENT du JSON valide, sans texte autour, selon cette structure exacte :
+                Renvoie UNIQUEMENT du JSON valide, sans texte autour :
                 {{
                   "jours": [
                     {{
@@ -129,11 +129,21 @@ with tab1:
                     else:
                         st.success("⭐ Déjà en favoris")
                     
-                    c1, c2, c3, c4 = st.columns(4)
-                    c1.metric("Calories", f"{repas.get('kcal', 0)} kcal")
-                    c2.metric("Protéines", f"{repas.get('proteines', 0)} g")
-                    c3.metric("Glucides", f"{repas.get('glucides', 0)} g")
-                    c4.metric("Lipides", f"{repas.get('lipides', 0)} g")
+                    # --- SECTION RÉSUMÉ MACRO AVEC BARRES ---
+                    st.markdown(f"**Résumé macro** — {repas.get('kcal', 0)} kcal")
+                    
+                    prot = repas.get('proteines', 0)
+                    gluc = repas.get('glucides', 0)
+                    lip = repas.get('lipides', 0)
+                    
+                    st.text(f"Protéines : {prot}g / 45g")
+                    st.progress(min(float(prot) / 45.0, 1.0))
+                    
+                    st.text(f"Glucides : {gluc}g / 55g")
+                    st.progress(min(float(gluc) / 55.0, 1.0))
+                    
+                    st.text(f"Lipides : {lip}g / 20g")
+                    st.progress(min(float(lip) / 20.0, 1.0))
                     
                     st.write("---")
                     col_ing, col_rec = st.columns([1, 2])
