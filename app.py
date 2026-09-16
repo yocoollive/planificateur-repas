@@ -1,12 +1,15 @@
+import streamlit as st
+import google.generativeai as genai
+import json
+import re
 import firebase_admin
 from firebase_admin import credentials
 from firebase_admin import firestore
-import streamlit as st
 
 st.set_page_config(page_title="Générateur de Repas", page_icon="🤖", layout="centered")
 st.title("🤖 Menu, Courses & Favoris")
 
-# --- TEST DE CONNEXION SÉCURISÉ AVEC AFFICHAGE D'ERREUR ---
+# --- 1. CONNEXION SÉCURISÉE FIREBASE & GEMINI ---
 db = None
 try:
     if not firebase_admin._apps:
@@ -19,42 +22,41 @@ try:
     db = firestore.client()
     st.success("✅ Connecté au Cloud (Firebase) & IA (Gemini)")
 except Exception as e:
-    st.error(re.sub(r'AIzaSy.*', '***CLE_MASQUEE***', str(e))) # Affiche l'erreur exacte si ça plante
+    st.error(f"Erreur d'initialisation : {e}")
 
-# --- 2. CONFIGURATION DE L'IA ---
-API_KEY = st.secrets["GEMINI_API_KEY"]
-genai.configure(api_key=API_KEY)
-model = genai.GenerativeModel(model_name="gemini-3.6-flash")
+# Configuration de l'IA
+try:
+    genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
+    model = genai.GenerativeModel(model_name="gemini-3.6-flash")
+except Exception as e:
+    st.error(f"Erreur configuration Gemini : {e}")
 
-st.set_page_config(page_title="Générateur de Repas", page_icon="🤖", layout="centered")
-
-st.title("🤖 Menu, Courses & Favoris")
-st.caption("✅ Connecté au Cloud (Firebase) & IA (Gemini)")
-
-# --- 3. CHARGEMENT SÉCURISÉ DEPUIS LA BASE DE DONNÉES ---
+# --- 2. CHARGEMENT DES DONNÉES ---
 if 'menu_data' not in st.session_state:
     st.session_state.menu_data = {}
 if 'favoris' not in st.session_state:
     st.session_state.favoris = {}
 
-try:
-    doc_semaine = db.collection('planificateur').document('menus_semaine').get()
-    if doc_semaine.exists:
-        st.session_state.menu_data = doc_semaine.to_dict().get("menus", {})
+if db:
+    try:
+        doc_semaine = db.collection('planificateur').document('menus_semaine').get()
+        if doc_semaine.exists:
+            st.session_state.menu_data = doc_semaine.to_dict().get("menus", {})
 
-    doc_favoris = db.collection('planificateur').document('recettes_favorites').get()
-    if doc_favoris.exists:
-        st.session_state.favoris = doc_favoris.to_dict().get("liste", {})
-except Exception as e:
-    st.warning(f"Mode hors-ligne ou erreur de chargement Firebase : {e}")
+        doc_favoris = db.collection('planificateur').document('recettes_favorites').get()
+        if doc_favoris.exists:
+            st.session_state.favoris = doc_favoris.to_dict().get("liste", {})
+    except Exception as e:
+        st.warning(f"Chargement des données en mode local : {e}")
 
 jours_semaine = ["Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi", "Dimanche"]
 
+# --- 3. INTERFACE (ONGLETS) ---
 tab1, tab2, tab3 = st.tabs(["📅 Plan de la semaine", "🛒 Liste de courses", "⭐ Favoris"])
 
-# --- ONGLET 1 : GÉNÉRATION DU MENU ---
+# ONGLET 1 : PLAN DE LA SEMAINE
 with tab1:
-    st.write("📌 **1. Sélectionne les jours à générer (décoche pour garder un repas)**")
+    st.write("📌 **Sélectionne les jours à générer**")
     
     jours_a_generer = []
     cols = st.columns(7)
@@ -70,28 +72,27 @@ with tab1:
     
     if st.button("✨ Générer les repas sélectionnés", type="primary"):
         if not jours_a_generer:
-            st.warning("Aucun jour sélectionné pour la génération !")
+            st.warning("Aucun jour sélectionné !")
         else:
-            with st.spinner(f"L'IA prépare les recettes pour : {', '.join(jours_a_generer)}..."):
+            with st.spinner("L'IA prépare vos menus..."):
                 liste_favoris = list(st.session_state.favoris.keys())
-                consigne_favoris = f"Voici une liste de recettes favorites : {liste_favoris}. N'hésite pas à piocher dedans si ça respecte les critères." if liste_favoris else ""
-
+                consigne_favoris = f"Favoris à considérer si possible : {liste_favoris}." if liste_favoris else ""
+                
                 prompt = f"""
                 Tu es un nutritionniste et chef cuisinier. Génère un menu UNIQUEMENT pour ces jours : {jours_a_generer}.
                 {consigne_favoris}
-                
                 Règles strictes :
                 - Souper ciblant entre 450 et 520 kcal par personne.
                 - AUCUN POIVRON.
                 - Alterner 1 jour Omnivore, 1 jour 100% Végétarien.
-                - Portions pour 2 personnes : 400 à 500g de légumes minimum, 80 à 100g de féculents crus (ou 300-350g pommes de terre), 300 à 360g de viande/poisson OU 320-350g d'alternative végétale, maximum 2 c.à.s d'huile.
-                - Batch Cooking : cuisson des féculents/légumes le dimanche, protéines à la minute le soir.
+                - Portions pour 2 personnes : 400 à 500g de légumes min, 80-100g de féculents crus (ou 300-350g pommes de terre), 300-360g de viande/poisson OU 320-350g végé, max 2 c.à.s d'huile.
+                - Batch Cooking : féculents/légumes cuits le dimanche, protéines saisies le soir.
                 
-                Renvoie UNIQUEMENT du JSON valide, sans texte autour. Structure exacte :
+                Renvoie UNIQUEMENT du JSON valide, sans texte autour :
                 {{
                   "jours": [
                     {{
-                      "jour": "Nom du jour (ex: Lundi)",
+                      "jour": "Lundi",
                       "type": "Omnivore",
                       "nom": "Titre du plat",
                       "temps_prep": "20 min",
@@ -100,12 +101,11 @@ with tab1:
                       "glucides": 45,
                       "lipides": 15,
                       "ingredients": [
-                        {{"nom": "Nom ingredient", "quantite": 300, "unite": "g", "rayon": "Viandes"}}
+                        {{"nom": "Poulet", "quantite": 340, "unite": "g", "rayon": "Viandes"}}
                       ],
                       "recette": [
-                        "Dimanche : Préparation des féculents et légumes...",
-                        "Jour J : Saisir la protéine...",
-                        "Jour J : Dressage..."
+                        "Dimanche : Cuisson des féculents et légumes.",
+                        "Jour J : Saisir la viande à la minute."
                       ]
                     }}
                   ]
@@ -114,24 +114,20 @@ with tab1:
                 try:
                     reponse = model.generate_content(prompt)
                     match = re.search(r'\{.*\}', reponse.text, re.DOTALL)
-                    
                     if match:
                         nouveaux_jours = json.loads(match.group(0)).get("jours", [])
-                        
                         for repas in nouveaux_jours:
                             st.session_state.menu_data[repas["jour"]] = repas
                         
-                        db.collection('planificateur').document('menus_semaine').set({"menus": st.session_state.menu_data})
-                        st.rerun() 
+                        if db:
+                            db.collection('planificateur').document('menus_semaine').set({"menus": st.session_state.menu_data})
+                        st.rerun()
                     else:
-                        st.error("Format de réponse inattendu. Relance la génération.")
-                        
+                        st.error("Erreur de format de l'IA. Relance.")
                 except Exception as e:
                     st.error(f"Erreur de génération : {e}")
 
     if st.session_state.menu_data:
-        st.info("💡 **Rappel Batch Cooking :** Cuisson des féculents et légumes le dimanche.")
-        
         for jour in jours_semaine:
             repas = st.session_state.menu_data.get(jour)
             if repas:
@@ -139,47 +135,38 @@ with tab1:
                     nom_plat = repas['nom']
                     est_favori = nom_plat in st.session_state.favoris
                     
-                    col_fav1, col_fav2 = st.columns([3, 1])
                     if not est_favori:
-                        if col_fav2.button("⭐ Ajouter aux favoris", key=f"btn_fav_{jour}_{nom_plat}"):
+                        if st.button("⭐ Ajouter aux favoris", key=f"fav_{jour}_{nom_plat}"):
                             st.session_state.favoris[nom_plat] = repas
-                            db.collection('planificateur').document('recettes_favorites').set({"liste": st.session_state.favoris})
+                            if db:
+                                db.collection('planificateur').document('recettes_favorites').set({"liste": st.session_state.favoris})
                             st.rerun()
                     else:
-                        col_fav2.success("⭐ En favoris")
+                        st.success("⭐ Déjà en favoris")
                     
                     c1, c2, c3, c4 = st.columns(4)
-                    kcal = repas.get("kcal", 0)
-                    c1.metric("Calories (~500)", f"{kcal} kcal")
-                    c1.progress(min(kcal / 520, 1.0)) 
-                    prot = repas.get("proteines", 0)
-                    c2.metric("Protéines", f"{prot} g")
-                    c2.progress(min(prot / 60, 1.0))
-                    gluc = repas.get("glucides", 0)
-                    c3.metric("Glucides", f"{gluc} g")
-                    c3.progress(min(gluc / 60, 1.0))
-                    lip = repas.get("lipides", 0)
-                    c4.metric("Lipides", f"{lip} g")
-                    c4.progress(min(lip / 20, 1.0))
+                    c1.metric("Calories", f"{repas.get('kcal', 0)} kcal")
+                    c2.metric("Protéines", f"{repas.get('proteines', 0)} g")
+                    c3.metric("Glucides", f"{repas.get('glucides', 0)} g")
+                    c4.metric("Lipides", f"{repas.get('lipides', 0)} g")
                     
                     st.write("---")
                     col_ing, col_rec = st.columns([1, 2])
                     with col_ing:
                         st.markdown("### 🛒 Ingrédients")
-                        for ing in repas["ingredients"]:
+                        for ing in repas.get("ingredients", []):
                             st.write(f"- {ing['nom']} : {ing['quantite']} {ing['unite']}")
                     with col_rec:
                         st.markdown("### 🍳 Préparation")
-                        if "recette" in repas:
-                            for etape in repas["recette"]:
-                                st.write(f"- {etape}")
+                        for etape in repas.get("recette", []):
+                            st.write(f"- {etape}")
 
-# --- ONGLET 2 : LISTE DE COURSES ---
+# ONGLET 2 : LISTE DE COURSES
 with tab2:
     if st.session_state.menu_data:
         courses = {}
         for repas in st.session_state.menu_data.values():
-            for ing in repas["ingredients"]:
+            for ing in repas.get("ingredients", []):
                 rayon = str(ing.get("rayon", "Autre")).capitalize()
                 nom = str(ing["nom"]).capitalize()
                 qte = ing["quantite"]
@@ -193,17 +180,6 @@ with tab2:
                 except ValueError:
                     courses[rayon][cle_ing] = qte
 
-        texte_export = "🛒 *LISTE DE COURSES - SEMAINE*\n\n"
-        for rayon, ingredients in courses.items():
-            texte_export += f"📍 *{rayon}*\n"
-            for ing, qte in ingredients.items():
-                qte_affichage = int(qte) if isinstance(qte, float) and qte.is_integer() else qte
-                texte_export += f"☐ {ing} : {qte_affichage}\n"
-            texte_export += "\n"
-
-        st.subheader("📲 Export Rapide")
-        st.code(texte_export, language="text")
-        st.write("---")
         st.subheader("🛒 Liste Interactive")
         for rayon, ingredients in courses.items():
             st.markdown(f"### {rayon}")
@@ -211,35 +187,22 @@ with tab2:
                 qte_affichage = int(qte) if isinstance(qte, float) and qte.is_integer() else qte
                 st.checkbox(f"{ing} : {qte_affichage}", key=f"chk_{rayon}_{ing}")
     else:
-        st.warning("Générez d'abord un menu pour voir la liste de courses.")
+        st.warning("Générez d'abord un menu.")
 
-# --- ONGLET 3 : FAVORIS ---
+# ONGLET 3 : FAVORIS
 with tab3:
     st.subheader("⭐ Vos Recettes Favorites")
     if st.session_state.favoris:
         for nom, repas in list(st.session_state.favoris.items()):
             with st.expander(f"⭐ {nom} ({repas.get('type', 'Inconnu')})"):
-                if st.button("❌ Retirer des favoris", key=f"del_fav_{nom}"):
+                if st.button("❌ Retirer", key=f"del_{nom}"):
                     del st.session_state.favoris[nom]
-                    db.collection('planificateur').document('recettes_favorites').set({"liste": st.session_state.favoris})
+                    if db:
+                        db.collection('planificateur').document('recettes_favorites').set({"liste": st.session_state.favoris})
                     st.rerun()
                 
-                st.write("---")
-                c1, c2, c3, c4 = st.columns(4)
-                c1.metric("Calories", f"{repas.get('kcal', 0)} kcal")
-                c2.metric("Protéines", f"{repas.get('proteines', 0)} g")
-                c3.metric("Glucides", f"{repas.get('glucides', 0)} g")
-                c4.metric("Lipides", f"{repas.get('lipides', 0)} g")
-                
-                col_ing, col_rec = st.columns([1, 2])
-                with col_ing:
-                    st.markdown("### 🛒 Ingrédients")
-                    for ing in repas["ingredients"]:
-                        st.write(f"- {ing['nom']} : {ing['quantite']} {ing['unite']}")
-                with col_rec:
-                    st.markdown("### 🍳 Préparation")
-                    if "recette" in repas:
-                        for etape in repas["recette"]:
-                            st.write(f"- {etape}")
+                st.markdown("### 🛒 Ingrédients")
+                for ing in repas.get("ingredients", []):
+                    st.write(f"- {ing['nom']} : {ing['quantite']} {ing['unite']}")
     else:
-        st.info("Aucune recette dans vos favoris. Ajoutez-en depuis le plan de la semaine !")
+        st.info("Aucun favori pour le moment.")
