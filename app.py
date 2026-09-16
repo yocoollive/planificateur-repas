@@ -5,13 +5,43 @@ import re
 
 # Configuration de la page
 st.set_page_config(page_title="Menu & Courses", page_icon="🥗", layout="centered")
-st.title("🤖 Menu, Courses & Batch Cooking")
+
+# --- DESIGN CSS "APP NATIVE" & PASTEL ---
+st.markdown("""
+    <style>
+    /* Masquer le header et le footer de Streamlit pour un effet application native */
+    #MainMenu {visibility: hidden;}
+    footer {visibility: hidden;}
+    header {visibility: hidden;}
+    
+    /* Fond général pastel très doux */
+    .stApp {
+        background-color: #F7F9F6;
+    }
+    
+    /* Style des expandeurs (blocs de repas) façon cartes iOS */
+    .streamlit-expanderHeader {
+        background-color: #FFFFFF !important;
+        border-radius: 12px !important;
+        border: 1px solid #E2E8F0 !important;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+        margin-bottom: 8px;
+    }
+    
+    /* Arrondis et design des conteneurs */
+    div.stButton > button {
+        border-radius: 10px;
+        font-weight: 600;
+    }
+    </style>
+""", unsafe_allow_html=True)
+
+st.title("🥗 Menu & Courses")
 
 # --- CONNEXION IA SÉCURISÉE ---
 try:
     genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
     model = genai.GenerativeModel(model_name="gemini-3.6-flash")
-    st.success("✅ Connecté à l'IA avec succès")
 except Exception as e:
     st.error(f"Erreur de configuration IA : {e}")
     model = None
@@ -27,7 +57,7 @@ if 'favoris' not in st.session_state:
 jours_semaine = ["Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi", "Dimanche"]
 
 # --- ONGLETS ---
-tab1, tab2, tab3, tab4 = st.tabs(["📅 Plan de la semaine", "🛒 Liste de courses", "🧊 Batch Cooking", "⭐ Favoris"])
+tab1, tab2, tab3, tab4 = st.tabs(["📅 Plan", "🛒 Courses", "🧊 Batch", "⭐ Favoris"])
 
 # ONGLET 1 : PLAN DE LA SEMAINE
 with tab1:
@@ -51,7 +81,7 @@ with tab1:
         elif not jours_a_generer:
             st.warning("Aucun jour sélectionné !")
         else:
-            with st.spinner("L'IA prépare vos menus et calcule votre Batch Cooking..."):
+            with st.spinner("L'acquisition des menus par l'IA..."):
                 liste_favoris = list(st.session_state.favoris.keys())
                 consigne_favoris = f"Favoris à considérer si possible : {liste_favoris}." if liste_favoris else ""
                 
@@ -63,7 +93,8 @@ with tab1:
                 - AUCUN POIVRON.
                 - Alterner 1 jour Omnivore, 1 jour 100% Végétarien.
                 - Portions pour 2 personnes : 400 à 500g de légumes min, 80-100g de féculents crus (ou 300-350g pommes de terre), 300-360g de viande/poisson OU 320-350g végé, max 2 c.à.s d'huile.
-                - Inclus les macros précises (protéines, glucides, lipides) pour le repas.
+                - Inclus les macros précises (protéines, glucides, lipides), le temps de préparation, et le type ("Omnivore" ou "Végétarien").
+                - Inclus également une section "batch_cooking" qui liste précisément les féculents et légumes de base à cuire en avance le dimanche.
 
                 Renvoie UNIQUEMENT du JSON valide, sans texte autour :
                 {{
@@ -106,7 +137,7 @@ with tab1:
                         
                         st.session_state.batch_data = data_brute.get("batch_cooking", [])
                         
-                        st.success("Menu et Batch Cooking générés avec succès !")
+                        st.success("Menu généré avec succès !")
                         st.rerun()
                     else:
                         st.error("Erreur de format de l'IA. Relance.")
@@ -118,30 +149,66 @@ with tab1:
         for jour in jours_semaine:
             repas = st.session_state.menu_data.get(jour)
             if repas:
-                with st.expander(f"**{jour}** : {repas['nom']} ({repas['type']}) | ⏱️ {repas.get('temps_prep', 'N/A')}"):
-                    nom_plat = repas['nom']
-                    est_favori = nom_plat in st.session_state.favoris
+                # Badge visuel de régime & infos en-tête
+                type_repas = repas.get('type', 'Omnivore')
+                badge = "🥬 Végé" if type_repas == "Végétarien" else "🥩 Omnivore"
+                titre_label = f"**{jour}** : {badge} | {repas['nom']} | ⏱️ {repas.get('temps_prep', 'N/A')} | 🔥 {repas.get('kcal', 0)} kcal"
+                
+                with st.expander(titre_label):
+                    # Bouton Swap unitaire
+                    col_swap, col_fav = st.columns([1, 1])
+                    with col_swap:
+                        if st.button(f"🔄 Remplacer ce plat", key=f"swap_{jour}"):
+                            with st.spinner(f"Remplacement du menu de {jour}..."):
+                                prompt_swap = f"""
+                                Génère un unique repas du soir (souper) pour le jour de {jour}, destiné à 2 personnes.
+                                Type imposé : {type_repas}.
+                                Règles strictes : Entre 450 et 520 kcal, AUCUN POIVRON, proportions conformes au plan.
+                                Renvoie UNIQUEMENT du JSON valide au format :
+                                {{
+                                  "jour": "{jour}",
+                                  "type": "{type_repas}",
+                                  "nom": "Titre du plat",
+                                  "temps_prep": "20 min",
+                                  "kcal": 480,
+                                  "proteines": 40,
+                                  "glucides": 45,
+                                  "lipides": 15,
+                                  "ingredients": [{{"nom": "Ingrédient", "quantite": 100, "unite": "g", "rayon": "Légumes"}}],
+                                  "recette": ["Etape 1"]
+                                }}
+                                """
+                                try:
+                                    rep_swap = model.generate_content(prompt_swap)
+                                    match_s = re.search(r'\{.*\}', rep_swap.text, re.DOTALL)
+                                    if match_s:
+                                        nouveau_repas = json.loads(match_s.group(0))
+                                        st.session_state.menu_data[jour] = nouveau_repas
+                                        st.success(f"Plat de {jour} remplacé !")
+                                        st.rerun()
+                                except Exception as e:
+                                    st.error(f"Erreur lors du swap : {e}")
                     
-                    if not est_favori:
-                        if st.button("⭐ Ajouter aux favoris", key=f"fav_{jour}_{nom_plat}"):
-                            st.session_state.favoris[nom_plat] = repas
-                            st.rerun()
-                    else:
-                        st.success("⭐ Déjà en favoris")
+                    with col_fav:
+                        nom_plat = repas['nom']
+                        if nom_plat not in st.session_state.favoris:
+                            if st.button("⭐ Mettre en favori", key=f"fav_{jour}_{nom_plat}"):
+                                st.session_state.favoris[nom_plat] = repas
+                                st.rerun()
+                        else:
+                            st.info("⭐ Déjà en favoris")
                     
-                    # --- SECTION RÉSUMÉ MACRO AVEC BARRES ---
+                    st.write("---")
+                    # Résumé macro avec barres de progression
                     st.markdown(f"**Résumé macro** — {repas.get('kcal', 0)} kcal")
-                    
                     prot = repas.get('proteines', 0)
                     gluc = repas.get('glucides', 0)
                     lip = repas.get('lipides', 0)
                     
                     st.text(f"Protéines : {prot}g / 45g")
                     st.progress(min(float(prot) / 45.0, 1.0))
-                    
                     st.text(f"Glucides : {gluc}g / 55g")
                     st.progress(min(float(gluc) / 55.0, 1.0))
-                    
                     st.text(f"Lipides : {lip}g / 20g")
                     st.progress(min(float(lip) / 20.0, 1.0))
                     
@@ -184,15 +251,15 @@ with tab2:
     else:
         st.warning("Générez d'abord un menu dans le premier onglet.")
 
-# ONGLET 3 : BATCH COOKING DU DIMANCHE
+# ONGLET 3 : BATCH COOKING
 with tab3:
     st.subheader("🧊 Préparation Batch Cooking du Dimanche")
     if st.session_state.batch_data:
-        st.info("Voici le détail exact des quantités à cuisiner en avance et à répartir dans vos boîtes hermétiques pour la semaine :")
+        st.info("Voici le détail exact des quantités à cuisiner en avance et à répartir dans vos boîtes hermétiques :")
         for item in st.session_state.batch_data:
             st.write(f"- **{item.get('boite')}** : {item.get('quantite_par_boite')} *({item.get('frequence')})*")
     else:
-        st.warning("Générez d'abord un menu dans le premier onglet pour voir le planning de batch cooking.")
+        st.warning("Générez d'abord un menu pour voir le planning de batch cooking.")
 
 # ONGLET 4 : FAVORIS
 with tab4:
