@@ -1,4 +1,4 @@
 streamlit
 google-generativeai
-pyrebase4
+firebase-admin
 requests
